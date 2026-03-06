@@ -3,33 +3,30 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>スロットゲーム</title>
+<title>777スロットゲーム</title>
 
 <style>
 
 body{
-background:linear-gradient(#111,#333);
+background:linear-gradient(#000,#222);
 color:white;
 text-align:center;
 font-family:sans-serif;
 }
 
-h1{
-margin-top:20px;
-}
-
 #machine{
-background:#222;
-border:5px solid gold;
+background:#111;
+border:6px solid gold;
 border-radius:20px;
 display:inline-block;
-padding:20px;
+padding:30px;
+box-shadow:0 0 20px gold;
 }
 
 .slot{
 font-size:70px;
 background:black;
-width:90px;
+width:100px;
 display:inline-block;
 margin:10px;
 border:3px solid silver;
@@ -40,14 +37,36 @@ button{
 font-size:18px;
 padding:10px 20px;
 margin:5px;
-cursor:pointer;
-border-radius:8px;
 border:none;
+border-radius:8px;
 background:gold;
+cursor:pointer;
 }
 
 button:hover{
 background:orange;
+}
+
+.win{
+animation:flash 0.5s infinite;
+}
+
+.jackpot{
+animation:rainbow 0.3s infinite;
+}
+
+@keyframes flash{
+0%{box-shadow:0 0 10px yellow;}
+50%{box-shadow:0 0 30px red;}
+100%{box-shadow:0 0 10px yellow;}
+}
+
+@keyframes rainbow{
+0%{box-shadow:0 0 20px red;}
+25%{box-shadow:0 0 20px yellow;}
+50%{box-shadow:0 0 20px lime;}
+75%{box-shadow:0 0 20px cyan;}
+100%{box-shadow:0 0 20px magenta;}
 }
 
 </style>
@@ -58,7 +77,6 @@ background:orange;
 <h1>🎰 スロットゲーム 🎰</h1>
 
 <h2>コイン: <span id="coin">10</span></h2>
-<h3>ハイスコア: <span id="highscore">0</span></h3>
 
 <div id="machine">
 
@@ -70,10 +88,11 @@ background:orange;
 
 <br>
 
-<button onclick="start()">回す</button><br>
-<button onclick="stopSlot(1)">STOP1</button>
-<button onclick="stopSlot(2)">STOP2</button>
-<button onclick="stopSlot(3)">STOP3</button>
+<button onclick="start()">回す</button>
+<br>
+<button onclick="stopSlot(1)">STOP</button>
+<button onclick="stopSlot(2)">STOP</button>
+<button onclick="stopSlot(3)">STOP</button>
 
 </div>
 
@@ -81,16 +100,13 @@ background:orange;
 
 <script>
 
-let items=["🍒","🍋","🔔","⭐","🍇"];
+let items=["🍒","🍋","🔔","⭐","🍇","7️⃣"];
 
 let coins=10;
 
 let spinning=[false,false,false];
 
-let interval1,interval2,interval3;
-
-let highscore=localStorage.getItem("slotHighScore") || 0;
-document.getElementById("highscore").textContent=highscore;
+let interval=[null,null,null];
 
 function start(){
 
@@ -102,19 +118,29 @@ return;
 coins--;
 document.getElementById("coin").textContent=coins;
 
-spinning=[true,true,true];
+document.getElementById("machine").classList.remove("win");
+document.getElementById("machine").classList.remove("jackpot");
 
-interval1=setInterval(()=>spinSlot(1),100);
-interval2=setInterval(()=>spinSlot(2),100);
-interval3=setInterval(()=>spinSlot(3),100);
+for(let i=1;i<=3;i++){
 
-document.getElementById("result").textContent="止めてください！";
+spinning[i-1]=true;
+
+interval[i-1]=setInterval(()=>{
+
+spin(i);
+
+},100);
 
 }
 
-function spinSlot(n){
+document.getElementById("result").textContent="ストップを押して止めよう";
+
+}
+
+function spin(n){
 
 let item=items[Math.floor(Math.random()*items.length)];
+
 document.getElementById("slot"+n).textContent=item;
 
 }
@@ -123,9 +149,9 @@ function stopSlot(n){
 
 if(!spinning[n-1]) return;
 
-spinning[n-1]=false;
+clearInterval(interval[n-1]);
 
-clearInterval(window["interval"+n]);
+spinning[n-1]=false;
 
 checkResult();
 
@@ -139,19 +165,31 @@ let s1=document.getElementById("slot1").textContent;
 let s2=document.getElementById("slot2").textContent;
 let s3=document.getElementById("slot3").textContent;
 
-if(s1===s2 && s2===s3){
+if(s1==="7️⃣" && s2==="7️⃣" && s3==="7️⃣"){
 
-coins+=10;
+coins+=50;
+
 document.getElementById("coin").textContent=coins;
-document.getElementById("result").textContent="🎉 JACKPOT +10コイン";
 
-if(coins>highscore){
-highscore=coins;
-localStorage.setItem("slotHighScore",highscore);
-document.getElementById("highscore").textContent=highscore;
+document.getElementById("result").textContent="🌈 777 JACKPOT!!! +50コイン";
+
+document.getElementById("machine").classList.add("jackpot");
+
 }
 
-}else{
+else if(s1===s2 && s2===s3){
+
+coins+=10;
+
+document.getElementById("coin").textContent=coins;
+
+document.getElementById("result").textContent="🎉 当たり！ +10コイン";
+
+document.getElementById("machine").classList.add("win");
+
+}
+
+else{
 
 document.getElementById("result").textContent="はずれ";
 
