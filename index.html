@@ -2,9 +2,15 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Mini Open World RPG</title>
+<title>3D RPG Mouse + Effect</title>
+
 <style>
-body{margin:0;overflow:hidden;background:black}
+body{
+margin:0;
+overflow:hidden;
+background:black;
+}
+
 #ui{
 position:absolute;
 top:10px;
@@ -12,6 +18,16 @@ left:10px;
 color:white;
 font-family:sans-serif;
 }
+
+#hint{
+position:absolute;
+top:50%;
+left:50%;
+transform:translate(-50%,-50%);
+color:white;
+font-size:20px;
+}
+
 </style>
 </head>
 
@@ -19,8 +35,10 @@ font-family:sans-serif;
 
 <div id="ui">
 HP: <span id="hp">100</span><br>
-Items: <span id="items">0</span><br>
+Stamina: <span id="stamina">100</span>
 </div>
+
+<div id="hint">クリックするとゲーム開始</div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
 
@@ -36,207 +54,227 @@ window.innerWidth/window.innerHeight,
 )
 
 let renderer=new THREE.WebGLRenderer()
+
 renderer.setSize(window.innerWidth,window.innerHeight)
+
 document.body.appendChild(renderer.domElement)
 
+
+// ===== ライト =====
+
 let light=new THREE.DirectionalLight(0xffffff,1)
+
 light.position.set(20,40,20)
+
 scene.add(light)
 
-let ambient=new THREE.AmbientLight(0x888888)
-scene.add(ambient)
+scene.add(new THREE.AmbientLight(0x666666))
 
-let groundGeo=new THREE.PlaneGeometry(300,300)
-let groundMat=new THREE.MeshLambertMaterial({color:0x4caf50})
-let ground=new THREE.Mesh(groundGeo,groundMat)
+
+// ===== 地面 =====
+
+let ground=new THREE.Mesh(
+
+new THREE.PlaneGeometry(300,300),
+
+new THREE.MeshLambertMaterial({color:0x55aa55})
+
+)
+
 ground.rotation.x=-Math.PI/2
+
 scene.add(ground)
 
-let playerGeo=new THREE.BoxGeometry(1,2,1)
-let playerMat=new THREE.MeshLambertMaterial({color:0x3366ff})
-let player=new THREE.Mesh(playerGeo,playerMat)
-player.position.y=1
+
+// ===== プレイヤー =====
+
+let player=new THREE.Group()
+
 scene.add(player)
 
-camera.position.set(0,5,10)
+let body=new THREE.Mesh(
+new THREE.BoxGeometry(1,2,0.6),
+new THREE.MeshLambertMaterial({color:0x3366ff})
+)
 
-let playerHP=100
-let items=0
+body.position.y=1
+player.add(body)
+
+player.position.y=0.7
+
+
+// ===== 剣 =====
+
+let sword=new THREE.Mesh(
+
+new THREE.BoxGeometry(0.1,1,0.1),
+
+new THREE.MeshLambertMaterial({color:0xffffff})
+
+)
+
+sword.position.set(-1,1.8,0)
+
+player.add(sword)
+
+
+// ===== 敵 =====
+
+let enemies=[]
+
+function spawnEnemy(){
+
+let enemy=new THREE.Mesh(
+
+new THREE.BoxGeometry(1.5,1.5,1.5),
+
+new THREE.MeshLambertMaterial({color:0xff3333})
+
+)
+
+enemy.position.x=Math.random()*40-20
+enemy.position.z=Math.random()*40-20
+enemy.position.y=0.75
+
+enemy.hp=40
+
+scene.add(enemy)
+
+enemies.push(enemy)
+
+}
+
+for(let i=0;i<8;i++)spawnEnemy()
+
+
+// ===== エフェクト =====
+
+let effects=[]
+
+function spawnEffect(x,y,z){
+
+let e=new THREE.Mesh(
+
+new THREE.SphereGeometry(0.3),
+
+new THREE.MeshBasicMaterial({color:0xffff00})
+
+)
+
+e.position.set(x,y,z)
+
+scene.add(e)
+
+effects.push({mesh:e,life:20})
+
+}
+
+
+// ===== プレイヤー状態 =====
+
+let hp=100
+let stamina=100
 
 let velocityY=0
 let onGround=true
 
-let monsters=[]
-let boss=null
-let arrows=[]
 
-function spawnMonster(){
+// ===== マウスカメラ =====
 
-let geo=new THREE.BoxGeometry(1.5,1.5,1.5)
-let mat=new THREE.MeshLambertMaterial({color:0xff3333})
-let m=new THREE.Mesh(geo,mat)
+let yaw=0
+let pitch=0
 
-m.position.x=Math.random()*100-50
-m.position.z=Math.random()*100-50
-m.position.y=0.75
+document.body.onclick=()=>{
 
-m.hp=30
+document.body.requestPointerLock()
 
-scene.add(m)
-monsters.push(m)
+document.getElementById("hint").style.display="none"
 
 }
 
-for(let i=0;i<10;i++)spawnMonster()
+document.addEventListener("mousemove",(e)=>{
 
-function spawnBoss(){
+if(document.pointerLockElement===document.body){
 
-let geo=new THREE.BoxGeometry(4,4,4)
-let mat=new THREE.MeshLambertMaterial({color:0xaa0000})
+yaw-=e.movementX*0.002
+pitch-=e.movementY*0.002
 
-boss=new THREE.Mesh(geo,mat)
-boss.position.set(20,2,20)
-boss.hp=200
-
-scene.add(boss)
+pitch=Math.max(-1.2,Math.min(1.2,pitch))
 
 }
 
-spawnBoss()
+})
 
-function createTree(x,z){
 
-let trunk=new THREE.Mesh(
-new THREE.CylinderGeometry(0.3,0.3,2),
-new THREE.MeshLambertMaterial({color:0x8b4513})
-)
-
-trunk.position.set(x,1,z)
-
-scene.add(trunk)
-
-let leaf=new THREE.Mesh(
-new THREE.SphereGeometry(1.5),
-new THREE.MeshLambertMaterial({color:0x228b22})
-)
-
-leaf.position.set(x,3,z)
-
-scene.add(leaf)
-
-}
-
-function createRock(x,z){
-
-let rock=new THREE.Mesh(
-new THREE.DodecahedronGeometry(1),
-new THREE.MeshLambertMaterial({color:0x777777})
-)
-
-rock.position.set(x,1,z)
-scene.add(rock)
-
-}
-
-for(let i=0;i<25;i++)createTree(Math.random()*200-100,Math.random()*200-100)
-for(let i=0;i<20;i++)createRock(Math.random()*200-100,Math.random()*200-100)
-
-let itemMeshes=[]
-
-function spawnItem(x,z){
-
-let item=new THREE.Mesh(
-new THREE.SphereGeometry(0.5),
-new THREE.MeshLambertMaterial({color:0xffff00})
-)
-
-item.position.set(x,0.5,z)
-scene.add(item)
-
-itemMeshes.push(item)
-
-}
-
-spawnItem(5,5)
-spawnItem(-10,15)
+// ===== キー =====
 
 let keys={}
 
 document.addEventListener("keydown",e=>keys[e.key]=true)
 document.addEventListener("keyup",e=>keys[e.key]=false)
 
-function swordAttack(){
 
-monsters.forEach((m,i)=>{
+// ===== 攻撃 =====
 
-if(player.position.distanceTo(m.position)<3){
+let attacking=false
+let attackTime=0
 
-m.hp-=20
+function attack(){
 
-if(m.hp<=0){
+if(attacking)return
 
-spawnItem(m.position.x,m.position.z)
-scene.remove(m)
-monsters.splice(i,1)
-
-}
+attacking=true
+attackTime=0
 
 }
 
-})
 
-if(boss && player.position.distanceTo(boss.position)<5){
-
-boss.hp-=20
-
-if(boss.hp<=0){
-
-scene.remove(boss)
-boss=null
-
-}
-
-}
-
-}
-
-function shootArrow(){
-
-let geo=new THREE.BoxGeometry(0.2,0.2,1)
-
-let arrow=new THREE.Mesh(
-geo,
-new THREE.MeshLambertMaterial({color:0xffffff})
-)
-
-arrow.position.copy(player.position)
-
-arrow.dir=new THREE.Vector3(0,0,-1)
-
-scene.add(arrow)
-
-arrows.push(arrow)
-
-}
-
-document.addEventListener("keydown",e=>{
-
-if(e.key===" ")swordAttack()
-
-if(e.key==="f")shootArrow()
-
-})
-
-let time=0
+// ===== 更新 =====
 
 function update(){
 
-let speed=0.2
+let speed=0.15
 
-if(keys["w"])player.position.z-=speed
-if(keys["s"])player.position.z+=speed
-if(keys["a"])player.position.x-=speed
-if(keys["d"])player.position.x+=speed
+if(keys["Shift"] && stamina>0){
+
+speed=0.3
+stamina-=0.2
+
+}
+
+let dirX=Math.sin(yaw)
+let dirZ=Math.cos(yaw)
+
+if(keys["w"]){
+
+player.position.x-=dirX*speed
+player.position.z-=dirZ*speed
+
+}
+
+if(keys["s"]){
+
+player.position.x+=dirX*speed
+player.position.z+=dirZ*speed
+
+}
+
+if(keys["a"]){
+
+player.position.x-=dirZ*speed
+player.position.z+=dirX*speed
+
+}
+
+if(keys["d"]){
+
+player.position.x+=dirZ*speed
+player.position.z-=dirX*speed
+
+}
+
+
+// ===== ジャンプ =====
 
 if(keys["j"] && onGround){
 
@@ -246,103 +284,107 @@ onGround=false
 }
 
 player.position.y+=velocityY
+
 velocityY-=0.01
 
-if(player.position.y<=1){
+if(player.position.y<=0.7){
 
-player.position.y=1
+player.position.y=0.7
 velocityY=0
 onGround=true
 
 }
 
-monsters.forEach(m=>{
 
-let dir=player.position.clone().sub(m.position)
+// ===== 剣アニメ =====
 
-dir.normalize()
+if(attacking){
 
-m.position.add(dir.multiplyScalar(0.02))
+attackTime+=0.2
 
-if(player.position.distanceTo(m.position)<2){
+sword.rotation.z=-Math.sin(attackTime)*2
 
-playerHP-=0.1
+// 当たり判定
+
+enemies.forEach((e,i)=>{
+
+if(player.position.distanceTo(e.position)<3){
+
+e.hp-=20
+
+spawnEffect(e.position.x,e.position.y,e.position.z)
+
+if(e.hp<=0){
+
+scene.remove(e)
+enemies.splice(i,1)
+
+}
 
 }
 
 })
 
-if(boss){
+if(attackTime>Math.PI){
 
-let dir=player.position.clone().sub(boss.position)
-
-dir.normalize()
-
-boss.position.add(dir.multiplyScalar(0.015))
-
-if(player.position.distanceTo(boss.position)<3){
-
-playerHP-=0.2
+attacking=false
+sword.rotation.z=0
 
 }
 
 }
 
-arrows.forEach((a,i)=>{
 
-a.position.add(a.dir.clone().multiplyScalar(0.5))
+// ===== エフェクト更新 =====
 
-monsters.forEach((m,mi)=>{
+effects.forEach((ef,i)=>{
 
-if(a.position.distanceTo(m.position)<1){
+ef.life--
 
-m.hp-=20
-scene.remove(a)
-arrows.splice(i,1)
+ef.mesh.scale.multiplyScalar(1.1)
+
+if(ef.life<=0){
+
+scene.remove(ef.mesh)
+
+effects.splice(i,1)
 
 }
 
 })
 
+
+// ===== カメラ =====
+
+camera.position.x=player.position.x + Math.sin(yaw)*6
+camera.position.z=player.position.z + Math.cos(yaw)*6
+camera.position.y=player.position.y + 4
+
+camera.lookAt(
+player.position.x,
+player.position.y+1,
+player.position.z
+)
+
+
+// ===== UI =====
+
+document.getElementById("hp").innerText=Math.floor(hp)
+document.getElementById("stamina").innerText=Math.floor(stamina)
+
+}
+
+
+// ===== キー =====
+
+document.addEventListener("keydown",e=>{
+
+if(e.key===" ")attack()
+
 })
 
-itemMeshes.forEach((it,i)=>{
 
-if(player.position.distanceTo(it.position)<2){
-
-items++
-scene.remove(it)
-itemMeshes.splice(i,1)
-
-}
-
-})
-
-if(keys["e"] && items>0){
-
-playerHP=Math.min(100,playerHP+30)
-items--
-
-}
-
-document.getElementById("hp").innerText=Math.floor(playerHP)
-document.getElementById("items").innerText=items
-
-time+=0.001
-
-let brightness=(Math.sin(time)+1)/2
-
-scene.background=new THREE.Color(brightness*0.5,brightness*0.7,brightness)
-
-light.intensity=brightness+0.2
-
-camera.position.x=player.position.x
-camera.position.z=player.position.z+10
-camera.position.y=player.position.y+5
-
-camera.lookAt(player.position)
-
-}
+// ===== ループ =====
 
 function animate(){
 
