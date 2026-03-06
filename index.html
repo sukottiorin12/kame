@@ -76,7 +76,7 @@ animation:rainbow 0.3s infinite;
 
 <h1>🎰 スロットゲーム 🎰</h1>
 
-<h2>コイン: <span id="coin">10</span></h2>
+<h2>コイン: <span id="coin">50</span></h2>
 
 <div id="machine">
 
@@ -90,9 +90,9 @@ animation:rainbow 0.3s infinite;
 
 <button onclick="start()">回す</button>
 <br>
+<button onclick="stopSlot(0)">STOP</button>
 <button onclick="stopSlot(1)">STOP</button>
 <button onclick="stopSlot(2)">STOP</button>
-<button onclick="stopSlot(3)">STOP</button>
 
 </div>
 
@@ -102,11 +102,11 @@ animation:rainbow 0.3s infinite;
 
 let items=["🍒","🍋","🔔","⭐","🍇","7️⃣"];
 
-let coins=10;
+let coins=50;
+
+let intervals=[null,null,null];
 
 let spinning=[false,false,false];
-
-let interval=[null,null,null];
 
 function start(){
 
@@ -116,42 +116,37 @@ return;
 }
 
 coins--;
+
 document.getElementById("coin").textContent=coins;
 
 document.getElementById("machine").classList.remove("win");
 document.getElementById("machine").classList.remove("jackpot");
 
-for(let i=1;i<=3;i++){
+for(let i=0;i<3;i++){
 
-spinning[i-1]=true;
+spinning[i]=true;
 
-interval[i-1]=setInterval(()=>{
+intervals[i]=setInterval(()=>{
 
-spin(i);
+let item=items[Math.floor(Math.random()*items.length)];
+
+document.getElementById("slot"+(i+1)).textContent=item;
 
 },100);
 
 }
 
-document.getElementById("result").textContent="ストップを押して止めよう";
-
-}
-
-function spin(n){
-
-let item=items[Math.floor(Math.random()*items.length)];
-
-document.getElementById("slot"+n).textContent=item;
+document.getElementById("result").textContent="STOPで止めよう";
 
 }
 
 function stopSlot(n){
 
-if(!spinning[n-1]) return;
+if(!spinning[n]) return;
 
-clearInterval(interval[n-1]);
+clearInterval(intervals[n]);
 
-spinning[n-1]=false;
+spinning[n]=false;
 
 checkResult();
 
