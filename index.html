@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
-<title>3D RPG Mouse + Effect</title>
+<meta charset="utf-8">
+<title>Open World RPG</title>
 
 <style>
 body{
@@ -19,13 +19,20 @@ color:white;
 font-family:sans-serif;
 }
 
-#hint{
-position:absolute;
-top:50%;
-left:50%;
-transform:translate(-50%,-50%);
-color:white;
-font-size:20px;
+.bar{
+width:200px;
+height:20px;
+background:#333;
+margin-bottom:5px;
+}
+
+.fill{
+height:100%;
+background:red;
+}
+
+#stamina .fill{
+background:yellow;
 }
 
 </style>
@@ -34,290 +41,241 @@ font-size:20px;
 <body>
 
 <div id="ui">
-HP: <span id="hp">100</span><br>
-Stamina: <span id="stamina">100</span>
+HP
+<div class="bar"><div id="hp" class="fill"></div></div>
+
+Stamina
+<div id="stamina" class="bar"><div id="st" class="fill"></div></div>
 </div>
 
-<div id="hint">クリックするとゲーム開始</div>
-
-<script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
 
 <script>
 
-let scene=new THREE.Scene()
+const scene=new THREE.Scene()
 
-let camera=new THREE.PerspectiveCamera(
+const camera=new THREE.PerspectiveCamera(
 75,
 window.innerWidth/window.innerHeight,
 0.1,
 1000
 )
 
-let renderer=new THREE.WebGLRenderer()
-
+const renderer=new THREE.WebGLRenderer()
 renderer.setSize(window.innerWidth,window.innerHeight)
-
 document.body.appendChild(renderer.domElement)
 
+camera.position.set(0,3,5)
 
-// ===== ライト =====
-
-let light=new THREE.DirectionalLight(0xffffff,1)
-
-light.position.set(20,40,20)
-
+const light=new THREE.DirectionalLight(0xffffff,1)
+light.position.set(5,10,5)
 scene.add(light)
 
-scene.add(new THREE.AmbientLight(0x666666))
+const ambient=new THREE.AmbientLight(0x888888)
+scene.add(ambient)
 
+//////////////////////////
+//// 地形
+//////////////////////////
 
-// ===== 地面 =====
+const groundGeo=new THREE.PlaneGeometry(200,200,50,50)
 
-let ground=new THREE.Mesh(
+for(let i=0;i<groundGeo.attributes.position.count;i++){
 
-new THREE.PlaneGeometry(300,300),
+let y=Math.random()*0.5
+groundGeo.attributes.position.setZ(i,y)
 
-new THREE.MeshLambertMaterial({color:0x55aa55})
+}
 
-)
+groundGeo.computeVertexNormals()
 
+const groundMat=new THREE.MeshStandardMaterial({color:0x3a8f3a})
+
+const ground=new THREE.Mesh(groundGeo,groundMat)
 ground.rotation.x=-Math.PI/2
 
 scene.add(ground)
 
+//////////////////////////
+//// 木
+//////////////////////////
 
-// ===== プレイヤー =====
+function createTree(x,z){
 
-let player=new THREE.Group()
+const trunk=new THREE.Mesh(
+new THREE.CylinderGeometry(0.2,0.2,2),
+new THREE.MeshStandardMaterial({color:0x8b5a2b})
+)
+
+trunk.position.set(x,1,z)
+
+const leaves=new THREE.Mesh(
+new THREE.SphereGeometry(1.5),
+new THREE.MeshStandardMaterial({color:0x2e8b57})
+)
+
+leaves.position.set(x,3,z)
+
+scene.add(trunk)
+scene.add(leaves)
+
+}
+
+for(let i=0;i<40;i++){
+createTree(
+Math.random()*100-50,
+Math.random()*100-50
+)
+}
+
+//////////////////////////
+//// 岩
+//////////////////////////
+
+function createRock(x,z){
+
+const rock=new THREE.Mesh(
+new THREE.DodecahedronGeometry(Math.random()+0.5),
+new THREE.MeshStandardMaterial({color:0x777777})
+)
+
+rock.position.set(x,0.5,z)
+scene.add(rock)
+
+}
+
+for(let i=0;i<25;i++){
+createRock(
+Math.random()*100-50,
+Math.random()*100-50
+)
+}
+
+//////////////////////////
+//// プレイヤー（人型）
+//////////////////////////
+
+const player=new THREE.Group()
+
+const body=new THREE.Mesh(
+new THREE.BoxGeometry(0.8,1.2,0.4),
+new THREE.MeshStandardMaterial({color:0x3366ff})
+)
+
+body.position.y=1.2
+
+const head=new THREE.Mesh(
+new THREE.SphereGeometry(0.35),
+new THREE.MeshStandardMaterial({color:0xffccaa})
+)
+
+head.position.y=2
+
+player.add(body)
+player.add(head)
 
 scene.add(player)
 
-let body=new THREE.Mesh(
-new THREE.BoxGeometry(1,2,0.6),
-new THREE.MeshLambertMaterial({color:0x3366ff})
-)
+//////////////////////////
+//// 剣
+//////////////////////////
 
-body.position.y=1
-player.add(body)
-
-player.position.y=0.7
-
-
-// ===== 剣 =====
-
-let sword=new THREE.Mesh(
-
+const sword=new THREE.Mesh(
 new THREE.BoxGeometry(0.1,1,0.1),
-
-new THREE.MeshLambertMaterial({color:0xffffff})
-
+new THREE.MeshStandardMaterial({color:0xcccccc})
 )
 
-sword.position.set(-1,1.8,0)
-
+sword.position.set(0.6,1.2,0)
 player.add(sword)
 
+let swordSwing=0
 
-// ===== 敵 =====
+//////////////////////////
+//// モンスター
+//////////////////////////
 
-let enemies=[]
+const monsters=[]
 
-function spawnEnemy(){
+function createMonster(x,z){
 
-let enemy=new THREE.Mesh(
-
-new THREE.BoxGeometry(1.5,1.5,1.5),
-
-new THREE.MeshLambertMaterial({color:0xff3333})
-
+const m=new THREE.Mesh(
+new THREE.BoxGeometry(1,1,1),
+new THREE.MeshStandardMaterial({color:0xaa2222})
 )
 
-enemy.position.x=Math.random()*40-20
-enemy.position.z=Math.random()*40-20
-enemy.position.y=0.75
+m.position.set(x,0.5,z)
 
-enemy.hp=40
+m.hp=3
 
-scene.add(enemy)
-
-enemies.push(enemy)
+scene.add(m)
+monsters.push(m)
 
 }
 
-for(let i=0;i<8;i++)spawnEnemy()
-
-
-// ===== エフェクト =====
-
-let effects=[]
-
-function spawnEffect(x,y,z){
-
-let e=new THREE.Mesh(
-
-new THREE.SphereGeometry(0.3),
-
-new THREE.MeshBasicMaterial({color:0xffff00})
-
+for(let i=0;i<8;i++){
+createMonster(
+Math.random()*60-30,
+Math.random()*60-30
 )
-
-e.position.set(x,y,z)
-
-scene.add(e)
-
-effects.push({mesh:e,life:20})
-
 }
 
-
-// ===== プレイヤー状態 =====
+//////////////////////////
+//// HPとスタミナ
+//////////////////////////
 
 let hp=100
 let stamina=100
 
-let velocityY=0
-let onGround=true
+const hpBar=document.getElementById("hp")
+const stBar=document.getElementById("st")
 
-
-// ===== マウスカメラ =====
+//////////////////////////
+//// マウス視点
+//////////////////////////
 
 let yaw=0
 let pitch=0
 
-document.body.onclick=()=>{
-
-document.body.requestPointerLock()
-
-document.getElementById("hint").style.display="none"
-
-}
-
-document.addEventListener("mousemove",(e)=>{
-
-if(document.pointerLockElement===document.body){
+document.addEventListener("mousemove",e=>{
 
 yaw-=e.movementX*0.002
 pitch-=e.movementY*0.002
 
-pitch=Math.max(-1.2,Math.min(1.2,pitch))
-
-}
+pitch=Math.max(-1,Math.min(1,pitch))
 
 })
 
+//////////////////////////
+//// 操作
+//////////////////////////
 
-// ===== キー =====
+const keys={}
 
-let keys={}
+document.addEventListener("keydown",e=>keys[e.key.toLowerCase()]=true)
+document.addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false)
 
-document.addEventListener("keydown",e=>keys[e.key]=true)
-document.addEventListener("keyup",e=>keys[e.key]=false)
-
-
-// ===== 攻撃 =====
-
-let attacking=false
-let attackTime=0
+//////////////////////////
+//// 攻撃
+//////////////////////////
 
 function attack(){
 
-if(attacking)return
+if(stamina<10)return
 
-attacking=true
-attackTime=0
+stamina-=10
+swordSwing=0.3
 
-}
+monsters.forEach(m=>{
 
+if(m.position.distanceTo(player.position)<2){
 
-// ===== 更新 =====
+m.hp--
 
-function update(){
+createHitEffect(m.position)
 
-let speed=0.15
+if(m.hp<=0){
 
-if(keys["Shift"] && stamina>0){
-
-speed=0.3
-stamina-=0.2
-
-}
-
-let dirX=Math.sin(yaw)
-let dirZ=Math.cos(yaw)
-
-if(keys["w"]){
-
-player.position.x-=dirX*speed
-player.position.z-=dirZ*speed
-
-}
-
-if(keys["s"]){
-
-player.position.x+=dirX*speed
-player.position.z+=dirZ*speed
-
-}
-
-if(keys["a"]){
-
-player.position.x-=dirZ*speed
-player.position.z+=dirX*speed
-
-}
-
-if(keys["d"]){
-
-player.position.x+=dirZ*speed
-player.position.z-=dirX*speed
-
-}
-
-
-// ===== ジャンプ =====
-
-if(keys["j"] && onGround){
-
-velocityY=0.25
-onGround=false
-
-}
-
-player.position.y+=velocityY
-
-velocityY-=0.01
-
-if(player.position.y<=0.7){
-
-player.position.y=0.7
-velocityY=0
-onGround=true
-
-}
-
-
-// ===== 剣アニメ =====
-
-if(attacking){
-
-attackTime+=0.2
-
-sword.rotation.z=-Math.sin(attackTime)*2
-
-// 当たり判定
-
-enemies.forEach((e,i)=>{
-
-if(player.position.distanceTo(e.position)<3){
-
-e.hp-=20
-
-spawnEffect(e.position.x,e.position.y,e.position.z)
-
-if(e.hp<=0){
-
-scene.remove(e)
-enemies.splice(i,1)
+scene.remove(m)
 
 }
 
@@ -325,72 +283,104 @@ enemies.splice(i,1)
 
 })
 
-if(attackTime>Math.PI){
-
-attacking=false
-sword.rotation.z=0
-
 }
-
-}
-
-
-// ===== エフェクト更新 =====
-
-effects.forEach((ef,i)=>{
-
-ef.life--
-
-ef.mesh.scale.multiplyScalar(1.1)
-
-if(ef.life<=0){
-
-scene.remove(ef.mesh)
-
-effects.splice(i,1)
-
-}
-
-})
-
-
-// ===== カメラ =====
-
-camera.position.x=player.position.x + Math.sin(yaw)*6
-camera.position.z=player.position.z + Math.cos(yaw)*6
-camera.position.y=player.position.y + 4
-
-camera.lookAt(
-player.position.x,
-player.position.y+1,
-player.position.z
-)
-
-
-// ===== UI =====
-
-document.getElementById("hp").innerText=Math.floor(hp)
-document.getElementById("stamina").innerText=Math.floor(stamina)
-
-}
-
-
-// ===== キー =====
 
 document.addEventListener("keydown",e=>{
 
-if(e.key===" ")attack()
+if(e.code==="Space"){
+attack()
+}
 
 })
 
+//////////////////////////
+//// ヒットエフェクト
+//////////////////////////
 
-// ===== ループ =====
+function createHitEffect(pos){
+
+const p=new THREE.Mesh(
+new THREE.SphereGeometry(0.2),
+new THREE.MeshBasicMaterial({color:0xffff00})
+)
+
+p.position.copy(pos)
+
+scene.add(p)
+
+setTimeout(()=>scene.remove(p),200)
+
+}
+
+//////////////////////////
+//// 昼夜
+//////////////////////////
+
+let time=0
+
+//////////////////////////
+//// ゲームループ
+//////////////////////////
 
 function animate(){
 
 requestAnimationFrame(animate)
 
-update()
+time+=0.001
+
+light.intensity=1+Math.sin(time)*0.5
+
+/////////////////
+//// 移動
+/////////////////
+
+const speed=0.15
+
+let dir=new THREE.Vector3()
+
+if(keys["w"])dir.z-=1
+if(keys["s"])dir.z+=1
+if(keys["a"])dir.x-=1
+if(keys["d"])dir.x+=1
+
+dir.normalize()
+
+player.position.x+=dir.x*speed
+player.position.z+=dir.z*speed
+
+/////////////////
+//// カメラ
+/////////////////
+
+camera.position.x=player.position.x+Math.sin(yaw)*5
+camera.position.z=player.position.z+Math.cos(yaw)*5
+camera.position.y=3
+
+camera.lookAt(player.position)
+
+/////////////////
+//// 剣アニメーション
+/////////////////
+
+if(swordSwing>0){
+
+sword.rotation.z=-Math.sin(swordSwing*10)*1.5
+swordSwing-=0.02
+
+}else{
+
+sword.rotation.z=0
+
+}
+
+/////////////////
+//// スタミナ回復
+/////////////////
+
+stamina=Math.min(100,stamina+0.05)
+
+hpBar.style.width=hp*2+"px"
+stBar.style.width=stamina*2+"px"
 
 renderer.render(scene,camera)
 
