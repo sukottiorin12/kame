@@ -85,7 +85,8 @@ animation:rainbow 0.3s infinite;
 <div id="topbar">
 コイン: <span id="coin">50</span><br>
 借金: <span id="debt">0</span><br>
-<button onclick="borrow()">借金する (+50)</button>
+<button onclick="borrow()">借金する (+50)</button><br>
+<button onclick="repay()">返済 (-50)</button>
 </div>
 
 <h1>🎰 スロットゲーム 🎰</h1>
@@ -112,7 +113,8 @@ animation:rainbow 0.3s infinite;
 
 <script>
 
-let items=["🍒","🍋","🔔","⭐","🍇","7️⃣"];
+let items=["🍒","🍋","🔔","⭐","🍇","7️⃣","7️⃣","7️⃣"]; 
+// 7を増やして当たり確率UP
 
 let coins=50;
 let debt=0;
@@ -213,6 +215,20 @@ debt+=50;
 
 document.getElementById("coin").textContent=coins;
 document.getElementById("debt").textContent=debt;
+
+}
+
+function repay(){
+
+if(coins>=50 && debt>=50){
+
+coins-=50;
+debt-=50;
+
+document.getElementById("coin").textContent=coins;
+document.getElementById("debt").textContent=debt;
+
+}
 
 }
 
