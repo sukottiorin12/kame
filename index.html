@@ -12,6 +12,7 @@ background:linear-gradient(#000,#222);
 color:white;
 text-align:center;
 font-family:sans-serif;
+overflow:hidden;
 }
 
 #topbar{
@@ -63,6 +64,10 @@ animation:flash 0.5s infinite;
 animation:rainbow 0.3s infinite;
 }
 
+.shake{
+animation:shake 0.3s infinite;
+}
+
 @keyframes flash{
 0%{box-shadow:0 0 10px yellow;}
 50%{box-shadow:0 0 30px red;}
@@ -77,6 +82,27 @@ animation:rainbow 0.3s infinite;
 100%{box-shadow:0 0 20px magenta;}
 }
 
+@keyframes shake{
+0%{transform:translate(0px,0px);}
+25%{transform:translate(5px,-5px);}
+50%{transform:translate(-5px,5px);}
+75%{transform:translate(5px,5px);}
+100%{transform:translate(0px,0px);}
+}
+
+.confetti{
+position:absolute;
+width:10px;
+height:10px;
+background:red;
+animation:fall 3s linear forwards;
+}
+
+@keyframes fall{
+0%{transform:translateY(-50px);}
+100%{transform:translateY(800px) rotate(720deg);}
+}
+
 </style>
 </head>
 
@@ -85,7 +111,7 @@ animation:rainbow 0.3s infinite;
 <div id="topbar">
 コイン: <span id="coin">50</span><br>
 借金: <span id="debt">0</span><br>
-<button onclick="borrow()">借金する (+50)</button><br>
+<button onclick="borrow()">借金 (+50)</button><br>
 <button onclick="repay()">返済 (-50)</button>
 </div>
 
@@ -113,8 +139,8 @@ animation:rainbow 0.3s infinite;
 
 <script>
 
-let items=["🍒","🍋","🔔","⭐","🍇","7️⃣","7️⃣","7️⃣"]; 
-// 7を増やして当たり確率UP
+let items=["🍒","🍋","🔔","⭐","🍇","7️⃣","7️⃣"]; 
+// 7を1つ減らした
 
 let coins=50;
 let debt=0;
@@ -136,8 +162,7 @@ document.getElementById("coin").textContent=coins;
 
 stopIndex=0;
 
-document.getElementById("machine").classList.remove("win");
-document.getElementById("machine").classList.remove("jackpot");
+document.getElementById("machine").classList.remove("win","jackpot","shake");
 
 for(let i=0;i<3;i++){
 
@@ -151,8 +176,6 @@ document.getElementById("slot"+(i+1)).textContent=item;
 },100);
 
 }
-
-document.getElementById("result").textContent="STOPかスペースキーで止めよう";
 
 }
 
@@ -184,7 +207,12 @@ document.getElementById("coin").textContent=coins;
 
 document.getElementById("result").textContent="🌈 777 JACKPOT!!! +50";
 
-document.getElementById("machine").classList.add("jackpot");
+let machine=document.getElementById("machine");
+
+machine.classList.add("jackpot");
+machine.classList.add("shake");
+
+confetti();
 
 }
 
@@ -246,6 +274,26 @@ stopIndex++;
 }
 
 });
+
+function confetti(){
+
+for(let i=0;i<50;i++){
+
+let c=document.createElement("div");
+
+c.className="confetti";
+
+c.style.left=Math.random()*window.innerWidth+"px";
+
+c.style.backgroundColor=`hsl(${Math.random()*360},100%,50%)`;
+
+document.body.appendChild(c);
+
+setTimeout(()=>{c.remove();},3000);
+
+}
+
+}
 
 </script>
 
