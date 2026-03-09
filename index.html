@@ -83,18 +83,17 @@ animation:shake 0.3s infinite;
 }
 
 @keyframes shake{
-0%{transform:translate(0px,0px);}
+0%{transform:translate(0,0);}
 25%{transform:translate(5px,-5px);}
 50%{transform:translate(-5px,5px);}
 75%{transform:translate(5px,5px);}
-100%{transform:translate(0px,0px);}
+100%{transform:translate(0,0);}
 }
 
 .confetti{
 position:absolute;
 width:10px;
 height:10px;
-background:red;
 animation:fall 3s linear forwards;
 }
 
@@ -139,8 +138,7 @@ animation:fall 3s linear forwards;
 
 <script>
 
-let items=["🍒","🍋","🔔","⭐","🍇","7️⃣","7️⃣"]; 
-// 7を1つ減らした
+let items=["🍒","🍋","🔔","⭐","🍇","7️⃣","7️⃣"];
 
 let coins=50;
 let debt=0;
@@ -152,6 +150,11 @@ let stopIndex=0;
 
 function start(){
 
+if(debt>=1000){
+document.getElementById("result").textContent="💀 借金1000！ゲームオーバー";
+return;
+}
+
 if(coins<=0){
 document.getElementById("result").textContent="コインがありません";
 return;
@@ -162,15 +165,19 @@ document.getElementById("coin").textContent=coins;
 
 stopIndex=0;
 
-document.getElementById("machine").classList.remove("win","jackpot","shake");
+let machine=document.getElementById("machine");
+machine.classList.remove("win","jackpot","shake");
 
 for(let i=0;i<3;i++){
 
 spinning[i]=true;
 
-intervals[i]=setInterval(()=>{
+clearInterval(intervals[i]);
+
+intervals[i]=setInterval(function(){
 
 let item=items[Math.floor(Math.random()*items.length)];
+
 document.getElementById("slot"+(i+1)).textContent=item;
 
 },100);
@@ -193,24 +200,23 @@ checkResult();
 
 function checkResult(){
 
-if(spinning.includes(true)) return;
+if(spinning[0] || spinning[1] || spinning[2]) return;
 
 let s1=document.getElementById("slot1").textContent;
 let s2=document.getElementById("slot2").textContent;
 let s3=document.getElementById("slot3").textContent;
 
+let machine=document.getElementById("machine");
+
 if(s1==="7️⃣" && s2==="7️⃣" && s3==="7️⃣"){
 
-coins+=50;
+coins+=200;
 
 document.getElementById("coin").textContent=coins;
 
-document.getElementById("result").textContent="🌈 777 JACKPOT!!! +50";
+document.getElementById("result").textContent="🌈 777 JACKPOT!!! +200";
 
-let machine=document.getElementById("machine");
-
-machine.classList.add("jackpot");
-machine.classList.add("shake");
+machine.classList.add("jackpot","shake");
 
 confetti();
 
@@ -224,7 +230,7 @@ document.getElementById("coin").textContent=coins;
 
 document.getElementById("result").textContent="🎉 当たり +10";
 
-document.getElementById("machine").classList.add("win");
+machine.classList.add("win");
 
 }
 
@@ -243,6 +249,12 @@ debt+=50;
 
 document.getElementById("coin").textContent=coins;
 document.getElementById("debt").textContent=debt;
+
+if(debt>=1000){
+
+document.getElementById("result").textContent="💀 借金1000！ゲームオーバー";
+
+}
 
 }
 
@@ -267,6 +279,7 @@ if(e.code==="Space"){
 if(stopIndex<3){
 
 stopSlot(stopIndex);
+
 stopIndex++;
 
 }
@@ -277,7 +290,7 @@ stopIndex++;
 
 function confetti(){
 
-for(let i=0;i<50;i++){
+for(let i=0;i<60;i++){
 
 let c=document.createElement("div");
 
